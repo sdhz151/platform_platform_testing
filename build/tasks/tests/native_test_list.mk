@@ -35,8 +35,11 @@ native_tests := \
     gatekeeperd-unit-tests \
     hello_world_test \
     hwui_unit_tests \
+    incident_helper_test \
+    incidentd_test \
     init_tests \
     installd_cache_test \
+    installd_dexopt_test \
     installd_service_test \
     installd_utils_test \
     JniInvocation_test \
@@ -80,6 +83,7 @@ native_tests := \
     net_test_types \
     netd_integration_test \
     netd_unit_test \
+    nfc_test_utils \
     pagemap_test \
     perfprofd_test \
     posix_async_io_test \
@@ -96,13 +100,13 @@ native_tests := \
     wificond_unit_test \
     wifilogd_unit_test \
     ziparchive-tests \
+    NeuralNetworksTest \
     SurfaceFlinger_test
 
 # Android Things specific tests
 ifeq ($(PRODUCT_IOT),true)
 
 native_tests += \
-    audio_userdriver_test \
     crash_reporter_tests \
     libandroidthings_pio_tests \
     libbrillo_test \

@@ -16,16 +16,20 @@ instrumentation_tests := \
     HelloWorldTests \
     BluetoothInstrumentationTests \
     crashcollector \
-    LongevityLibTests \
+    LongevityPlatformLibTests \
     ManagedProvisioningTests \
     FrameworksCoreTests \
+    BinderProxyCountingTestApp \
+    BinderProxyCountingTestService \
     FrameworksNetTests \
-    FrameworksNotificationTests \
+    FrameworksUiServicesTests \
+    BstatsTestApp \
     ConnTestApp \
     FrameworksServicesTests \
     JobTestApp \
     FrameworksUtilTests \
     MtpDocumentsProviderTests \
+    MtpTests \
     DocumentsUITests \
     ShellTests \
     SystemUITests \
@@ -54,7 +58,8 @@ instrumentation_tests := \
     TelephonyProviderTests \
     CarrierConfigTests \
     TeleServiceTests \
-    SettingsProviderTest
+    SettingsProviderTest \
+    FrameworksLocationTests
 
 # Android Things specific tests
 ifeq ($(PRODUCT_IOT),true)

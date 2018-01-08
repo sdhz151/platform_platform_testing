@@ -26,12 +26,17 @@ import android.support.test.uiautomator.By;
 import android.support.test.uiautomator.UiDevice;
 import android.system.helpers.LockscreenHelper;
 import android.system.helpers.OverviewHelper;
+import android.system.helpers.SettingsHelper;
+import android.view.IWindowManager;
+import android.view.Surface;
+import android.view.WindowManagerGlobal;
+
+import org.junit.Before;
+import org.junit.Test;
 
 import java.io.File;
 import java.util.HashSet;
 import java.util.Set;
-import org.junit.Before;
-import org.junit.Test;
 
 /**
  * Tests to test various latencies in the system.
@@ -61,6 +66,9 @@ public class LatencyTests {
     private static final String TEST_SCREEN_TURNON = "testScreenTurnOn";
     private static final String TEST_PINCHECK_DELAY = "testPinCheckDelay";
     private static final String TEST_APPTORECENTS = "testAppToRecents";
+    private static final String TEST_ROTATION_LATENCY = "testRotationLatency";
+    private static final String TEST_SETTINGS_SEARCH = "testSettingsSearch";
+
     private String mTraceDirectoryStr = null;
     private Bundle mArgs;
     private File mRootTrace = null;
@@ -241,6 +249,43 @@ public class LatencyTests {
     }
 
     /**
+     * Test how long it takes for rotation animation.
+     * <p>
+     * Every iteration will output a log in the form of "LatencyTracker/action=6 delay=x".
+     */
+    @Test
+    public void testRotationLatency() throws Exception {
+        if (isTracesEnabled()) {
+            createTraceDirectory();
+        }
+        mDevice.wakeUp();
+        for (int i = 0; i < mIterationCount; i++) {
+            mDevice.executeShellCommand(String.format(AM_START_COMMAND_TEMPLATE,
+                    Settings.ACTION_SETTINGS));
+            mDevice.waitForIdle();
+            if (null != mAtraceLogger) {
+                mAtraceLogger.atraceStart(mTraceCategoriesSet, mTraceBufferSize,
+                        mTraceDumpInterval, mRootTrace,
+                        String.format("%s-%d", TEST_ROTATION_LATENCY, i));
+            }
+
+            IWindowManager wm = WindowManagerGlobal.getWindowManagerService();
+            wm.freezeRotation(Surface.ROTATION_0);
+            mDevice.waitForIdle();
+            wm.freezeRotation(Surface.ROTATION_90);
+            mDevice.waitForIdle();
+            wm.thawRotation();
+            mDevice.waitForIdle();
+
+            if (null != mAtraceLogger) {
+                mAtraceLogger.atraceStop();
+            }
+        }
+        mDevice.pressHome();
+        mDevice.waitForIdle();
+    }
+
+    /**
      * Test that measure how long the total time takes until recents is visible after pressing it.
      * Note that this is different from {@link AppTransitionTests#testAppToRecents} as we are
      * measuring the full latency here, but in the app transition test we only measure the time
@@ -278,13 +323,38 @@ public class LatencyTests {
         }
     }
 
+    @Test
+    public void testSettingsSearch() throws Exception {
+        if (isTracesEnabled()) {
+            createTraceDirectory();
+        }
+        SettingsHelper settingsHelper = SettingsHelper.getInstance();
+
+        for (int i = 0; i < mIterationCount; i++) {
+            mDevice.executeShellCommand(String.format(AM_START_COMMAND_TEMPLATE,
+                    Settings.ACTION_SETTINGS));
+            settingsHelper.openSearch(InstrumentationRegistry.
+                    getInstrumentation().getContext());
+            if (mAtraceLogger != null) {
+                mAtraceLogger.atraceStart(mTraceCategoriesSet, mTraceBufferSize,
+                        mTraceDumpInterval, mRootTrace,
+                        String.format("%s-%d", TEST_SETTINGS_SEARCH, i));
+            }
+            settingsHelper.performNoResultQuery();
+            if (mAtraceLogger != null) {
+                mAtraceLogger.atraceStop();
+            }
+            mDevice.pressHome();
+            mDevice.waitForIdle();
+        }
+    }
+
     private void pressUiRecentApps() throws Exception {
         mDevice.findObject(By.res("com.android.systemui", "recent_apps")).click();
     }
 
     /**
      * Create trace directory for the latency tests to store the trace files.
-     * @param subDirectoryName
      */
     private void createTraceDirectory() throws Exception {
         mRootTrace = new File(mTraceDirectoryStr);
@@ -297,7 +367,7 @@ public class LatencyTests {
     /**
      * @return
      */
-    private boolean isTracesEnabled(){
+    private boolean isTracesEnabled() {
         return (null != mTraceDirectoryStr && !mTraceDirectoryStr.isEmpty());
     }
 }

@@ -19,7 +19,7 @@ instrumentation_metric_tests := \
     DocumentsUIAppPerfTests \
     MtpDocumentsProviderPerfTests \
     perf-setup.sh \
-    SurfaceComposition \
     RsBlasBenchmark \
     ImageProcessingJB \
-    MultiUserPerfTests
+    MultiUserPerfTests \
+    NeuralNetworksApiBenchmark
