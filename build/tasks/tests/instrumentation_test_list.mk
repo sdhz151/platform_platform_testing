@@ -48,6 +48,7 @@ instrumentation_tests := \
     LauncherFunctionalTests \
     DownloadAppFunctionalTests \
     NotificationFunctionalTests \
+    DexLoggerIntegrationTests \
     DownloadProviderTests \
     EmergencyInfoUnitTests \
     CalendarProviderTests \
@@ -59,7 +60,8 @@ instrumentation_tests := \
     CarrierConfigTests \
     TeleServiceTests \
     SettingsProviderTest \
-    FrameworksLocationTests
+    FrameworksLocationTests \
+    FrameworksPrivacyLibraryTests
 
 # Android Things specific tests
 ifeq ($(PRODUCT_IOT),true)

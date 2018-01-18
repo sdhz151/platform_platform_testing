@@ -53,6 +53,7 @@ native_tests := \
     libjavacore-unit-tests \
     liblog-unit-tests \
     libminijail_unittest_gtest \
+    libperfmgr_test \
     libtextclassifier_tests \
     libvintf_test \
     libwifi-system_tests \
@@ -93,6 +94,7 @@ native_tests := \
     scrape_mmap_addr \
     simpleperf_cpu_hotplug_test \
     simpleperf_unit_test \
+    statsd_test \
     syscall_filter_unittest_gtest \
     time-unit-tests \
     update_engine_unittests \
