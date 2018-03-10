@@ -52,7 +52,7 @@ import java.util.List;
  * generate a HelperManager and to instantiate implementations.
  * <li> Dexed file inclusion - if this manager and the helper implementations are bundled into dex
  * files and loaded from a single class loader, then the files can be used to generate a
- * HelperManager and to instantiate implementations.
+ * HelperManager and to instantiate implementations. Use of this is discouraged.
  * </ol>
  * <p>
  * Including and using this strategy will prune the explicit dependency tree for the App Helper
@@ -140,14 +140,36 @@ public class HelperManager {
      * @return a concrete implementation of base
      */
     public <T extends IAppHelper> T get(Class<T> base) {
-        List<T> implementations = getAll(base);
+        return get(base, "");
+    }
 
-        if (implementations.size() > 0) {
-            return implementations.get(0);
-        } else {
-            throw new RuntimeException(
-                    String.format("Failed to find an implementation for %s", base.toString()));
+    /**
+     * Returns a concrete implementation of the helper interface supplied, if available.
+     *
+     * @param base the interface base class to find an implementation for
+     * @param prefix a prefix for matching the helper implementation, if multiple exist
+     * @throws RuntimeException if no implementation is found
+     * @return a concrete implementation of base
+     */
+    public <T extends IAppHelper> T get(Class<T> base, String prefix) {
+        List<T> implementations = getAll(base);
+        List<T> matching = new ArrayList<>();
+        for (T implementation : implementations) {
+            if (implementation.getClass().getSimpleName().startsWith(prefix)) {
+                Log.i(LOG_TAG, "Found matching implementation: "
+                        + implementation.getClass().getSimpleName());
+                matching.add(implementation);
+            }
         }
+
+        if (!matching.isEmpty()) {
+            T result = matching.get(0);
+            Log.i(LOG_TAG, "Selecting implementation: " + result.getClass().getSimpleName());
+            return result;
+        }
+
+        throw new RuntimeException(
+                String.format("Failed to find an implementation for %s", base.toString()));
     }
 
     /**

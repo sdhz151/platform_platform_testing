@@ -19,10 +19,13 @@ package com.android.apptransition.tests;
 import android.app.ActivityManager;
 import android.app.IActivityManager;
 import android.app.Instrumentation;
+import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.content.pm.ResolveInfo;
+import android.content.res.Resources;
+import android.graphics.Point;
 import android.os.Bundle;
 import android.os.ParcelFileDescriptor;
 import android.os.RemoteException;
@@ -31,6 +34,8 @@ import android.support.test.launcherhelper.ILauncherStrategy;
 import android.support.test.launcherhelper.LauncherStrategyFactory;
 import android.support.test.rule.logging.AtraceLogger;
 import android.support.test.uiautomator.By;
+import android.support.test.uiautomator.BySelector;
+import android.support.test.uiautomator.Direction;
 import android.support.test.uiautomator.UiDevice;
 import android.support.test.uiautomator.UiObject2;
 import android.support.test.uiautomator.Until;
@@ -50,7 +55,9 @@ import java.util.Map;
 import java.util.Set;
 
 import org.junit.After;
+import org.junit.Assume;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 
 public class AppTransitionTests {
@@ -74,7 +81,6 @@ public class AppTransitionTests {
     private static final String HOT_LAUNCH = "hot_launch";
     private static final String NOT_SURE = "not_sure";
     private static final String ACTIVITY = "Activity";
-    private static final String NOT_SUCCESSFUL_MESSAGE = "App launch not successful";
     private static final String KEY_TRACE_DIRECTORY = "trace_directory";
     private static final String KEY_TRACE_CATEGORY = "trace_categories";
     private static final String KEY_TRACE_BUFFERSIZE = "trace_bufferSize";
@@ -85,6 +91,8 @@ public class AppTransitionTests {
     private static final String DEFAULT_TRACE_DUMP_INTERVAL = "10";
     private static final String DELIMITER = ",";
     private static final String SYSTEMUI_PACKAGE = "com.android.systemui";
+    private static final BySelector RECENTS = By.res(SYSTEMUI_PACKAGE, "recents_view");
+    private static final int TASK_SWITCH_SWIPE_SPEED = 500;
     private Context mContext;
     private UiDevice mDevice;
     private PackageManager mPackageManager;
@@ -107,6 +115,8 @@ public class AppTransitionTests {
     private AtraceLogger mAtraceLogger = null;
     private String mComponentName = null;
     private Map<String,String> mPreAppsComponentName = new HashMap<String, String>();
+    private float mDisplayDensity;
+    private boolean mHasLeanback = false;
 
     @Before
     public void setUp() throws Exception {
@@ -115,7 +125,16 @@ public class AppTransitionTests {
         mArgs = InstrumentationRegistry.getArguments();
         mActivityManager = ActivityManager.getService();
         mDevice = UiDevice.getInstance(getInstrumentation());
-        mLauncherStrategy = LauncherStrategyFactory.getInstance(mDevice).getLauncherStrategy();
+        LauncherStrategyFactory factory = LauncherStrategyFactory.getInstance(mDevice);
+        mLauncherStrategy = factory.getLauncherStrategy();
+        mHasLeanback = hasLeanback(getInstrumentation().getTargetContext());
+
+        // Inject an instance of instrumentation only if leanback. This enables to launch any app
+        // in the Apps and Games row on leanback launcher.
+        if (mHasLeanback) {
+            factory.getLeanbackLauncherStrategy().setInstrumentation(getInstrumentation());
+        }
+
         createLaunchIntentMappings();
         String mAppsList = mArgs.getString(LAUNCH_APPS);
         mPreAppsList = mArgs.getString(PRE_LAUNCH_APPS);
@@ -129,6 +148,7 @@ public class AppTransitionTests {
         }
         mAppsList = mAppsList.replaceAll("%"," ");
         mAppListArray = mAppsList.split(DELIMITER);
+        mDisplayDensity = mContext.getResources().getDisplayMetrics().density;
 
         // Parse the trace parameters
         mTraceDirectoryStr = mArgs.getString(KEY_TRACE_DIRECTORY);
@@ -195,7 +215,7 @@ public class AppTransitionTests {
                 }
                 sleep(mPostLaunchTimeout);
                 mDevice.pressHome();
-		mDevice.waitForIdle();
+                mDevice.waitForIdle();
                 closeApps(new String[] {
                         appName
                 });
@@ -258,6 +278,7 @@ public class AppTransitionTests {
      */
     @Test
     public void testAppToRecents() throws IOException, InterruptedException, RemoteException {
+        Assume.assumeFalse(mHasLeanback);
         if (isTracesEnabled()) {
             createTraceDirectory("testAppToRecents");
         }
@@ -302,6 +323,7 @@ public class AppTransitionTests {
     @Test
     public void testHotLaunchFromRecents() throws IOException, InterruptedException,
             RemoteException {
+        Assume.assumeFalse(mHasLeanback);
         if (isTracesEnabled()) {
             createTraceDirectory("testHotLaunchFromRecents");
         }
@@ -356,11 +378,51 @@ public class AppTransitionTests {
     }
 
     /**
-     * Press on the recents icon
+     * Returns whether recents (overview) is implemented in Launcher.
+     */
+    private boolean isRecentsInLauncher() {
+        final PackageManager pm = getInstrumentation().getTargetContext().getPackageManager();
+        try {
+            final Resources resources = pm.getResourcesForApplication(SYSTEMUI_PACKAGE);
+            int id = resources.getIdentifier("config_overviewServiceComponent", "string",
+                    SYSTEMUI_PACKAGE);
+            pm.getServiceInfo(
+                    ComponentName.unflattenFromString(resources.getString(id)), 0);
+            return true;
+        } catch (PackageManager.NameNotFoundException e) {
+            return false;
+        }
+    }
+
+    private BySelector getLauncherOverviewSelector() {
+        return By.res(mDevice.getLauncherPackageName(), "overview_panel");
+    }
+
+    /**
+     * Shows and returns the recents view.
+     *
      * @throws RemoteException if press recents is not successful
      */
-    private void pressUiRecentApps() throws RemoteException {
-        mDevice.findObject(By.res(SYSTEMUI_PACKAGE, "recent_apps")).click();
+    private UiObject2 pressUiRecentApps() throws RemoteException {
+        if (isRecentsInLauncher()) {
+            // Swipe from the Home button to approximately center of the screen.
+            UiObject2 homeButton = mDevice.findObject(By.res(SYSTEMUI_PACKAGE, "home_button"));
+            homeButton.setGestureMargins(0, -homeButton.getVisibleBounds().bottom / 2, 0, 1);
+            homeButton.swipe(Direction.UP, 1);
+        } else {
+            mDevice.findObject(By.res(SYSTEMUI_PACKAGE, "recent_apps")).click();
+        }
+
+        mDevice.waitForIdle();
+
+        final UiObject2 recentsView = mDevice.wait(
+                Until.findObject(isRecentsInLauncher() ? getLauncherOverviewSelector() : RECENTS),
+                5000);
+
+        if (recentsView == null) {
+            throw new RuntimeException("Recents didn't appear");
+        }
+        return recentsView;
     }
 
     /**
@@ -372,17 +434,43 @@ public class AppTransitionTests {
     }
 
     /**
-     * Open recents task and click on the most recent task.
+     * Open recents view and click on the most recent task.
      * @throws RemoteException if press recents is not successful
      */
     public void openMostRecentTask() throws RemoteException {
-        pressUiRecentApps();
-        UiObject2 recentsView = mDevice.wait(Until.findObject(
-                By.res(SYSTEMUI_PACKAGE, "recents_view")), 5000);
-        List<UiObject2> recentsTasks = recentsView.getChildren().get(0)
-                .getChildren();
-        UiObject2 mostRecentTask = recentsTasks.get(recentsTasks.size() - 1);
-        mostRecentTask.click();
+        final UiObject2 recentsView = pressUiRecentApps();
+
+        if (isRecentsInLauncher()) {
+            final List<UiObject2> taskViews = mDevice.findObjects(
+                    By.res(mDevice.getLauncherPackageName(), "snapshot"));
+
+            switch (taskViews.size()) {
+                case 1:
+                    // We see in the overview: the workspace card in the center, but it's not
+                    // included in 'taskViews', and the edge of the last active task on the right
+                    // (#1). We need to swipe to it before clicking at it.
+                    recentsView.swipe(Direction.LEFT, 1,
+                            (int) (TASK_SWITCH_SWIPE_SPEED * mDisplayDensity));
+                    mDevice.waitForIdle();
+                    break;
+                case 2:
+                    // We see in the overview: the active task in the middle (#0), the next task
+                    // on the right (#1), and the workspace card on the left, but it's not
+                    // included in 'taskViews'.
+                    break;
+                default:
+                    throw new RuntimeException(
+                            "Unexpected number of visible tasks: " + taskViews.size());
+            }
+
+            // Click at the first task.
+            taskViews.get(0).click();
+        } else {
+            List<UiObject2> recentsTasks = recentsView.getChildren().get(0)
+                    .getChildren();
+            UiObject2 mostRecentTask = recentsTasks.get(recentsTasks.size() - 1);
+            mostRecentTask.click();
+        }
     }
 
     /**
@@ -442,7 +530,9 @@ public class AppTransitionTests {
         PackageManager pm = getInstrumentation().getContext()
                 .getPackageManager();
         Intent intentToResolve = new Intent(Intent.ACTION_MAIN);
-        intentToResolve.addCategory(Intent.CATEGORY_LAUNCHER);
+        intentToResolve.addCategory(mHasLeanback ?
+                        Intent.CATEGORY_LEANBACK_LAUNCHER :
+                        Intent.CATEGORY_LAUNCHER);
         List<ResolveInfo> ris = pm.queryIntentActivities(intentToResolve, 0);
         resolveLoop(ris, intentToResolve, pm);
     }
@@ -631,4 +721,12 @@ public class AppTransitionTests {
     private Instrumentation getInstrumentation() {
         return InstrumentationRegistry.getInstrumentation();
     }
+
+    /**
+     * @return True if we're running on Android TV.
+     */
+    private boolean hasLeanback(Context context) {
+        return context.getPackageManager().hasSystemFeature(PackageManager.FEATURE_LEANBACK);
+    }
 }
+
