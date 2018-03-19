@@ -16,29 +16,29 @@
 
 package android.platform.systemui.tests.jank;
 
-import java.io.File;
-import java.io.IOException;
-
-import android.content.Intent;
+import android.content.ComponentName;
 import android.content.pm.PackageManager;
+import android.content.res.Resources;
 import android.graphics.Point;
 import android.graphics.Rect;
+import android.os.Bundle;
 import android.os.Environment;
 import android.os.RemoteException;
-import android.os.SystemClock;
 import android.support.test.jank.GfxMonitor;
 import android.support.test.jank.JankTest;
 import android.support.test.jank.JankTestBase;
-import android.support.test.jank.WindowAnimationFrameStatsMonitor;
 import android.support.test.launcherhelper.ILauncherStrategy;
 import android.support.test.launcherhelper.LauncherStrategyFactory;
+import android.support.test.timeresulthelper.TimeResultLogger;
 import android.support.test.uiautomator.By;
 import android.support.test.uiautomator.Direction;
 import android.support.test.uiautomator.UiDevice;
 import android.support.test.uiautomator.UiObject2;
 import android.support.test.uiautomator.UiObjectNotFoundException;
-import android.support.test.timeresulthelper.TimeResultLogger;
-import android.os.Bundle;
+import android.support.test.uiautomator.Until;
+
+import java.io.File;
+import java.io.IOException;
 
 /*
  * LauncherTwoJankTests cover the old launcher, and
@@ -137,10 +137,18 @@ public class LauncherJankTests extends JankTestBase {
     @GfxMonitor(processName="#getLauncherPackage")
     public void testAllAppsContainerSwipe() {
         UiObject2 allApps = mDevice.findObject(mLauncherStrategy.getAllAppsSelector());
-        allApps.setGestureMargin(300);
+        final int allAppsHeight = allApps.getVisibleBounds().height();
         Direction dir = mLauncherStrategy.getAllAppsScrollDirection();
         for (int i = 0; i < INNER_LOOP * 2; i++) {
+            if (dir == Direction.DOWN) {
+                // Start the gesture in the center to avoid starting at elements near the top.
+                allApps.setGestureMargins(0, 0, 0, allAppsHeight / 2);
+            }
             allApps.fling(dir, FLING_SPEED);
+            if (dir == Direction.DOWN) {
+                // Start the gesture in the center, for symmetry.
+                allApps.setGestureMargins(0, allAppsHeight / 2, 0, 0);
+            }
             allApps.fling(Direction.reverse(dir), FLING_SPEED);
         }
     }
@@ -234,7 +242,7 @@ public class LauncherJankTests extends JankTestBase {
     }
 
     /**
-     * Opens and closes the Messages app repeadetly, measuring jank for synchronized app
+     * Opens and closes the Messages app repeatedly, measuring jank for synchronized app
      * transitions.
      */
     @JankTest(beforeTest="beforeOpenCloseMessagesApp", afterTest="afterOpenCloseMessagesApp",
@@ -244,6 +252,35 @@ public class LauncherJankTests extends JankTestBase {
         for (int i = 0; i < INNER_LOOP; i++) {
             mLauncherStrategy.launch("Messages", "com.google.android.apps.messaging");
             pressUiHome();
+        }
+    }
+
+    public void beforeOpenMessagesAppFromRecents() throws UiObjectNotFoundException, IOException {
+        goHome();
+        mLauncherStrategy.launch("Messages", "com.google.android.apps.messaging");
+        TimeResultLogger.writeTimeStampLogStart(String.format("%s-%s",
+                getClass().getSimpleName(), getName()), TIMESTAMP_FILE);
+    }
+
+    public void afterOpenMessagesAppFromRecents(Bundle metrics) throws IOException {
+        TimeResultLogger.writeTimeStampLogEnd(String.format("%s-%s",
+                getClass().getSimpleName(), getName()), TIMESTAMP_FILE);
+        TimeResultLogger.writeResultToFile(String.format("%s-%s",
+                getClass().getSimpleName(), getName()), RESULTS_FILE, metrics);
+        super.afterTest(metrics);
+    }
+
+    /**
+     * Opens the Messages app repeatedly from recents, measuring jank for synchronized app
+     * transitions.
+     */
+    @JankTest(beforeTest="beforeOpenMessagesAppFromRecents",
+            afterTest="afterOpenMessagesAppFromRecents", expectedFrames=80)
+    @GfxMonitor(processName="#getLauncherPackage")
+    public void testOpenMessagesAppFromRecents() throws Exception {
+        for (int i = 0; i < INNER_LOOP; i++) {
+            SystemUiJankTests.openRecents(getInstrumentation().getTargetContext(), mDevice);
+            mLauncherStrategy.launch("Messages", "com.google.android.apps.messaging");
         }
     }
 }

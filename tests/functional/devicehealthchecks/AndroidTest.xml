@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Copyright (C) 2017 The Android Open Source Project
+<!-- Copyright (C) 2018 The Android Open Source Project
 
      Licensed under the Apache License, Version 2.0 (the "License");
      you may not use this file except in compliance with the License.
@@ -13,20 +13,14 @@
      See the License for the specific language governing permissions and
      limitations under the License.
 -->
-<configuration description="Runs sample instrumentation test.">
-    <option name="test-suite-tag" value="apct" />
-    <option name="test-suite-tag" value="apct-instrumentation" />
-    <target_preparer class="com.android.tradefed.targetprep.TestFilePushSetup" />
+<configuration description="Runs DeviceHealthChecks.">
     <target_preparer class="com.android.tradefed.targetprep.TestAppInstallSetup">
-        <option name="test-file-name" value="HelloWorldTests.apk" />
+        <option name="test-file-name" value="DeviceHealthChecks.apk" />
     </target_preparer>
-    <target_preparer class="com.android.tradefed.targetprep.PushFilePreparer" />
-    <target_preparer class="com.android.tradefed.targetprep.RunCommandTargetPreparer" />
 
-    <option name="test-suite-tag" value="apct" />
-    <option name="test-tag" value="SampleInstrumentationTest" />
+    <option name="test-tag" value="DeviceHealthChecks" />
     <test class="com.android.tradefed.testtype.AndroidJUnitTest" >
-        <option name="package" value="android.test.example.helloworld" />
+        <option name="package" value="com.android.devicehealthchecks" />
         <option name="runner" value="android.support.test.runner.AndroidJUnitRunner" />
     </test>
 </configuration>
