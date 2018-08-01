@@ -1,5 +1,5 @@
 #
-# Copyright (C) 2016 The Android Open Source Project
+# Copyright (C) 2018 The Android Open Source Project
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -13,17 +13,23 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+
 LOCAL_PATH := $(call my-dir)
-
-# Build for device side tests
 include $(CLEAR_VARS)
-LOCAL_MODULE := platform-test-annotations
-LOCAL_SRC_FILES := $(call all-java-files-under, src)
-LOCAL_SDK_VERSION := current  # To allow use from CTS
-include $(BUILD_STATIC_JAVA_LIBRARY)
 
-# Build for host side tests
-include $(CLEAR_VARS)
-LOCAL_MODULE := platform-test-annotations-host
+LOCAL_PACKAGE_NAME := FlickerTests
+LOCAL_MODULE_TAGS := tests optional
 LOCAL_SRC_FILES := $(call all-java-files-under, src)
-include $(BUILD_HOST_JAVA_LIBRARY)
+LOCAL_PRIVATE_PLATFORM_APIS := true
+LOCAL_CERTIFICATE := platform
+LOCAL_COMPATIBILITY_SUITE := device-tests
+
+LOCAL_JAVA_LIBRARIES := android.test.runner
+LOCAL_STATIC_JAVA_LIBRARIES := \
+    flickertestapplib \
+    flickerlib \
+    truth-prebuilt \
+    app-helpers-core
+
+include $(BUILD_PACKAGE)
+include $(call all-makefiles-under,$(LOCAL_PATH))

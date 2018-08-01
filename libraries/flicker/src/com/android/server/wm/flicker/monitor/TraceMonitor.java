@@ -18,12 +18,10 @@ package com.android.server.wm.flicker.monitor;
 
 import static com.android.compatibility.common.util.SystemUtil.runShellCommand;
 
-import android.os.Environment;
 import android.os.RemoteException;
 
 import com.android.internal.annotations.VisibleForTesting;
 
-import java.io.File;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Locale;
@@ -32,17 +30,11 @@ import java.util.Locale;
  * Base class for monitors containing common logic to read the trace
  * as a byte array and save the trace to another location.
  */
-public abstract class TraceMonitor {
+public abstract class TraceMonitor implements ITransitionMonitor {
     public static final String TAG = "FLICKER";
     private static final String TRACE_DIR = "/data/misc/wmtrace/";
-    private static final String OUTPUT_DIR =
-            Environment.getExternalStorageDirectory().getPath();
 
     String traceFileName;
-
-    abstract void start();
-
-    abstract void stop();
 
     abstract boolean isEnabled() throws RemoteException;
 
@@ -52,12 +44,15 @@ public abstract class TraceMonitor {
      *
      * Moves the trace file from the default location via a shell command since the test app
      * does not have security privileges to access /data/misc/wmtrace.
+     *
      * @param testTag suffix added to trace name used to identify trace
-     * @param iteration suffix added to trace name used to identify trace
+     *
      * @return Path to saved trace file
      */
-    public Path saveTraceFile(String testTag, int iteration) {
-        Path traceFileCopy = getOutputTraceFilePath(testTag, iteration);
+    @Override
+    public Path save(String testTag) {
+        OUTPUT_DIR.toFile().mkdirs();
+        Path traceFileCopy = getOutputTraceFilePath(testTag);
         String copyCommand = String.format(Locale.getDefault(), "mv %s%s %s", TRACE_DIR,
                 traceFileName, traceFileCopy.toString());
         runShellCommand(copyCommand);
@@ -65,7 +60,7 @@ public abstract class TraceMonitor {
     }
 
     @VisibleForTesting
-    Path getOutputTraceFilePath(String testTag, int iteration) {
-        return Paths.get(OUTPUT_DIR, traceFileName + "_" + testTag + "_" + iteration);
+    Path getOutputTraceFilePath(String testTag) {
+        return OUTPUT_DIR.resolve(traceFileName + "_" + testTag);
     }
 }

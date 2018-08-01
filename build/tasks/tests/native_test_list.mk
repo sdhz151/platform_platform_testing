@@ -14,6 +14,7 @@
 
 native_tests := \
     adbd_test \
+    backtrace_test \
     bionic-unit-tests \
     bionic-unit-tests-static \
     bluetoothtbd_test \
@@ -40,8 +41,7 @@ native_tests := \
     incident_helper_test \
     incidentd_test \
     init_tests \
-    inputflinger_tests_InputDispatcher_test \
-    inputflinger_tests_InputReader_test \
+    inputflinger_tests \
     installd_cache_test \
     installd_dexopt_test \
     installd_otapreopt_test \
@@ -53,20 +53,19 @@ native_tests := \
     libbase_test \
     libcutils_test \
     libcutils_test_static \
+    libdemangle_test \
     libgui_test \
     libhidl_test \
-    libinput_tests_InputChannel_test \
-    libinput_tests_InputEvent_test \
-    libinput_tests_InputPublisherAndConsumer_test \
-    libinput_tests_VelocityTracker_test \
+    libinput_tests \
     libjavacore-unit-tests \
     liblog-unit-tests \
     libminijail_unittest_gtest \
     libperfmgr_test \
+    libprocinfo_test \
     libtextclassifier_tests \
     libsurfaceflinger_unittest \
+    libunwindstack_test \
     libvintf_test \
-    libwifi-system_tests \
     linker-unit-tests \
     logcat-unit-tests \
     logd-unit-tests \
@@ -104,6 +103,7 @@ native_tests := \
     perfprofd_test \
     posix_async_io_test \
     prioritydumper_test \
+    puffin_unittest \
     recovery_component_test \
     recovery_unit_test \
     scrape_mmap_addr \
@@ -117,20 +117,30 @@ native_tests := \
     wificond_unit_test \
     wifilogd_unit_test \
     ziparchive-tests \
+    NeuralNetworksTest_mt_static \
+    NeuralNetworksTest_operations \
     NeuralNetworksTest_static \
+    NeuralNetworksTest_static_asan \
     SurfaceFlinger_test \
-    lmkd_unit_test
+    lmkd_unit_test \
+    vrflinger_test
 
 # Android Things specific tests
 ifeq ($(PRODUCT_IOT),true)
 
 native_tests += \
+    audiomap_test \
     crash_reporter_tests \
     libandroidthings_pio_tests \
+    libaudiodevicedriver_test \
+    libbootanimation_iot_test \
     libbrillo_test \
     libchrome_test \
     libusersensors_binder_test \
+    metricsd_tests \
     peripheralman_unittests \
+    pio_unittests \
+    realtimeman_tests \
     sensors_userdriver_test \
     userinputdriver_test
 

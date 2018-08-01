@@ -46,8 +46,6 @@ instrumentation_tests := \
     AndroidVCardTests \
     PermissionFunctionalTests \
     BlockedNumberProviderTest \
-    SettingsFunctionalTests \
-    LauncherFunctionalTests \
     DownloadAppFunctionalTests \
     NotificationFunctionalTests \
     DexLoggerIntegrationTests \
@@ -66,13 +64,16 @@ instrumentation_tests := \
     SettingsProviderTest \
     FrameworksLocationTests \
     FrameworksPrivacyLibraryTests \
-    SettingsUITests
+    SettingsUITests \
+    FlickerTestApp \
+    FlickerTests
 
 # Android Things specific tests
 ifeq ($(PRODUCT_IOT),true)
 
 instrumentation_tests += \
     AndroidThingsTests \
+    BluetoothControlServiceTests \
     ThingsIntegrationTests \
     WifiSetupUnitTests
 

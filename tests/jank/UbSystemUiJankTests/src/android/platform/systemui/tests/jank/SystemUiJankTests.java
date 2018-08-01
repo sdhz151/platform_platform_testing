@@ -16,6 +16,7 @@
 
 package android.platform.systemui.tests.jank;
 
+import static android.support.test.InstrumentationRegistry.getInstrumentation;
 import static android.system.helpers.OverviewHelper.isRecentsInLauncher;
 
 import static org.junit.Assert.assertNotNull;
@@ -25,6 +26,7 @@ import android.app.Notification.Builder;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.app.RemoteInput;
+import android.content.ContentResolver;
 import android.content.Context;
 import android.content.Intent;
 import android.graphics.Rect;
@@ -33,10 +35,13 @@ import android.os.Bundle;
 import android.os.Environment;
 import android.os.RemoteException;
 import android.os.SystemClock;
+import android.os.UserHandle;
+import android.provider.Settings;
 import android.support.test.InstrumentationRegistry;
 import android.support.test.jank.GfxMonitor;
 import android.support.test.jank.JankTest;
 import android.support.test.jank.JankTestBase;
+import android.support.test.launcherhelper.LauncherStrategyFactory;
 import android.support.test.timeresulthelper.TimeResultLogger;
 import android.support.test.uiautomator.By;
 import android.support.test.uiautomator.BySelector;
@@ -51,11 +56,16 @@ import android.system.helpers.OverviewHelper;
 import android.widget.Button;
 import android.widget.ImageView;
 
+import com.android.internal.hardware.AmbientDisplayConfiguration;
+
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+
+import static android.system.helpers.OverviewHelper.isRecentsInLauncher;
+import static org.junit.Assert.assertNotNull;
 
 public class SystemUiJankTests extends JankTestBase {
 
@@ -118,6 +128,7 @@ public class SystemUiJankTests extends JankTestBase {
     private UiDevice mDevice;
     private ArrayList<String> mLaunchedPackages;
     private NotificationManager mNotificationManager;
+    private int mInitialDozeAlwaysOn;
 
     public void setUp() throws Exception {
         mDevice = UiDevice.getInstance(getInstrumentation());
@@ -130,6 +141,16 @@ public class SystemUiJankTests extends JankTestBase {
                 NotificationManager.class);
         InstrumentationRegistry.registerInstance(getInstrumentation(), getArguments());
         blockNotifications();
+        // Need to run strategy initialization code as a precondition for tests.
+        LauncherStrategyFactory.getInstance(mDevice);
+
+        // Enable AOD, otherwise we won't test all animations. Having AOD off also adds
+        // unpredictable fluctuations since the display can take up to 200ms to turn on.
+        AmbientDisplayConfiguration configuration =
+                new AmbientDisplayConfiguration(getInstrumentation().getContext());
+        mInitialDozeAlwaysOn = configuration.alwaysOnEnabled(UserHandle.USER_SYSTEM) ? 1 : 0;
+        ContentResolver contentResolver = getInstrumentation().getContext().getContentResolver();
+        Settings.Secure.putInt(contentResolver, Settings.Secure.DOZE_ALWAYS_ON, 1);
     }
 
     public void goHome() {
@@ -141,6 +162,9 @@ public class SystemUiJankTests extends JankTestBase {
     protected void tearDown() throws Exception {
         mDevice.unfreezeRotation();
         unblockNotifications();
+        ContentResolver contentResolver = getInstrumentation().getContext().getContentResolver();
+        Settings.Secure.putInt(contentResolver, Settings.Secure.DOZE_ALWAYS_ON,
+                mInitialDozeAlwaysOn);
         super.tearDown();
     }
 
@@ -407,6 +431,8 @@ public class SystemUiJankTests extends JankTestBase {
     }
 
     public void beforeNotificationListPull() throws Exception {
+        mDevice.wakeUp();
+        mDevice.waitForIdle();
         prepareNotifications(GROUP_MODE_LEGACY);
         TimeResultLogger.writeTimeStampLogStart(String.format("%s-%s",
                 getClass().getSimpleName(), getName()), TIMESTAMP_FILE);
@@ -724,45 +750,6 @@ public class SystemUiJankTests extends JankTestBase {
         }
     }
 
-    public void beforeCameraFromLockscreen() throws Exception {
-        TimeResultLogger.writeTimeStampLogStart(String.format("%s-%s",
-                getClass().getSimpleName(), getName()), TIMESTAMP_FILE);
-    }
-
-    public void beforeCameraFromLockscreenLoop() throws Exception {
-        mDevice.pressHome();
-        mDevice.sleep();
-        // Make sure we don't trigger the camera launch double-tap shortcut
-        SystemClock.sleep(300);
-        mDevice.wakeUp();
-        mDevice.waitForIdle();
-    }
-
-    public void afterCameraFromLockscreen(Bundle metrics) throws Exception {
-        TimeResultLogger.writeTimeStampLogEnd(String.format("%s-%s",
-                getClass().getSimpleName(), getName()), TIMESTAMP_FILE);
-        mDevice.pressHome();
-        TimeResultLogger.writeResultToFile(String.format("%s-%s",
-                getClass().getSimpleName(), getName()), RESULTS_FILE, metrics);
-        super.afterTest(metrics);
-    }
-
-    /**
-     * Measures jank when launching the camera from lockscreen.
-     */
-    @JankTest(expectedFrames = 10,
-            defaultIterationCount = 5,
-            beforeTest = "beforeCameraFromLockscreen",
-            afterTest = "afterCameraFromLockscreen",
-            beforeLoop = "beforeCameraFromLockscreenLoop")
-    @GfxMonitor(processName = SYSTEMUI_PACKAGE)
-    public void testCameraFromLockscreen() throws Exception {
-        mDevice.swipe(mDevice.getDisplayWidth() - SWIPE_MARGIN,
-                mDevice.getDisplayHeight() - SWIPE_MARGIN, SWIPE_MARGIN, SWIPE_MARGIN,
-                DEFAULT_SCROLL_STEPS);
-        mDevice.waitForIdle();
-    }
-
     public void beforeAmbientWakeUp() throws Exception {
         postNotifications(GROUP_MODE_UNGROUPED);
         mDevice.sleep();
@@ -799,6 +786,7 @@ public class SystemUiJankTests extends JankTestBase {
             SystemClock.sleep(100);
             mDevice.waitForIdle();
             mDevice.wakeUp();
+            SystemClock.sleep(500);
             mDevice.waitForIdle();
             mDevice.sleep();
             SystemClock.sleep(1000);
@@ -888,8 +876,6 @@ public class SystemUiJankTests extends JankTestBase {
             replyButton.click();
             mDevice.waitForIdle();
             Thread.sleep(1000);
-            mDevice.pressBack();
-            mDevice.waitForIdle();
             mDevice.pressBack();
             mDevice.waitForIdle();
         }

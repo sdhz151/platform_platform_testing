@@ -16,7 +16,6 @@
 
 package com.android.server.wm.flicker.monitor;
 
-import static android.os.SystemClock.sleep;
 import static android.surfaceflinger.nano.Layerstrace.LayersTraceFileProto.MAGIC_NUMBER_H;
 import static android.surfaceflinger.nano.Layerstrace.LayersTraceFileProto.MAGIC_NUMBER_L;
 
@@ -47,7 +46,7 @@ public class LayersTraceMonitorTest {
     @After
     public void teardown() {
         mLayersTraceMonitor.stop();
-        mLayersTraceMonitor.getOutputTraceFilePath("captureLayersTrace", 0).toFile().delete();
+        mLayersTraceMonitor.getOutputTraceFilePath("captureLayersTrace").toFile().delete();
     }
 
     @Test
@@ -68,7 +67,7 @@ public class LayersTraceMonitorTest {
     public void captureLayersTrace() throws Exception {
         mLayersTraceMonitor.start();
         mLayersTraceMonitor.stop();
-        File testFile = mLayersTraceMonitor.saveTraceFile("captureLayersTrace", 0).toFile();
+        File testFile = mLayersTraceMonitor.save("captureLayersTrace").toFile();
         assertThat(testFile.exists()).isTrue();
         byte[] trace = Files.toByteArray(testFile);
         assertThat(trace.length).isGreaterThan(0);
