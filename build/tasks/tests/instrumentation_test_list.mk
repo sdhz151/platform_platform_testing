@@ -64,9 +64,7 @@ instrumentation_tests := \
     SettingsProviderTest \
     FrameworksLocationTests \
     FrameworksPrivacyLibraryTests \
-    SettingsUITests \
-    FlickerTestApp \
-    FlickerTests
+    SettingsUITests
 
 # Android Things specific tests
 ifeq ($(PRODUCT_IOT),true)
@@ -74,6 +72,7 @@ ifeq ($(PRODUCT_IOT),true)
 instrumentation_tests += \
     AndroidThingsTests \
     BluetoothControlServiceTests \
+    NetworkingServicesUnitTests \
     ThingsIntegrationTests \
     WifiSetupUnitTests
 
