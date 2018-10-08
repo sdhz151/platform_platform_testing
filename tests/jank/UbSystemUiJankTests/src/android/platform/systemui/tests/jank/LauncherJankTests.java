@@ -66,6 +66,7 @@ public class LauncherJankTests extends JankTestBase {
         mLauncherStrategy = LauncherStrategyFactory.getInstance(mDevice).getLauncherStrategy();
         mLauncher = new LauncherInstrumentation(getInstrumentation());
         mDevice.executeShellCommand("pm disable com.google.android.music");
+        mDevice.pressHome();
     }
 
     public String getLauncherPackage() {
@@ -84,7 +85,8 @@ public class LauncherJankTests extends JankTestBase {
     }
 
     public void resetAndOpenRecents() throws UiObjectNotFoundException, RemoteException {
-        mLauncher.pressHome().switchToOverview();
+        mDevice.pressHome();
+        mLauncher.getWorkspace().switchToOverview();
     }
 
     public void prepareOpenAllAppsContainer() throws IOException {
