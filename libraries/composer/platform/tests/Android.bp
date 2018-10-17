@@ -1,5 +1,5 @@
 //
-// Copyright (C) 2017 The Android Open Source Project
+// Copyright (C) 2018 The Android Open Source Project
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,32 +14,16 @@
 // limitations under the License.
 //
 
-java_test_host {
-    name: "LongevityHostLibTests",
-    static_libs: [
-        "longevity-host-lib",
-        "mockito-host",
-        "truth-host-prebuilt",
-        "guavalib",
-        "objenesis-host",
-        "test-composers",
-    ],
-    srcs: ["src/android/longevity/core//**/*.java"],
-}
-
-//##########################
-
 android_test {
-    name: "LongevityPlatformLibTests",
-
-    sdk_version: "24",
+    name: "PlatformTestComposersTests",
+    sdk_version: "current",
     static_libs: [
-        "longevity-device-lib",
-        "mockito-target",
-        "truth-prebuilt",
-        "guava",
+        "androidx-test",
+        "junit",
         "platform-test-composers",
+        "test-composers-tests",
+        "truth-prebuilt",
     ],
-    srcs: ["src/android/longevity/platform//**/*.java"],
-    test_suites: ["device-tests"],
+    srcs: [ "src/**/*.java" ],
+    test_suites: [ "device-tests" ],
 }
