@@ -12,9 +12,23 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// Filegroup for the profile proto definition that enables referencing it elsewhere.
+filegroup {
+    name: "profile-proto-def",
+    srcs: [ "src/**/profile.proto" ],
+}
+
 java_library_static {
     name: "test-composers",
-    srcs: [ "src/**/*.java" ],
+    static_libs: [ "junit" ],
+    srcs: [
+        "src/**/*.java",
+        "src/**/*.proto",
+    ],
+    proto: {
+        type: "lite",
+        include_dirs: ["external/protobuf/src"],
+    },
     sdk_version: "current",
     host_supported: true,
 }

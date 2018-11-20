@@ -19,9 +19,11 @@ import android.longevity.core.listener.ErrorTerminator;
 import android.longevity.core.listener.TimeoutTerminator;
 import android.host.test.composer.Iterate;
 import android.host.test.composer.Shuffle;
+import android.host.test.composer.Profile;
 
 import org.junit.runner.Runner;
 import org.junit.runner.notification.RunNotifier;
+import org.junit.runner.notification.StoppedByUserException;
 import org.junit.runners.Suite;
 import org.junit.runners.model.InitializationError;
 import org.junit.runners.model.RunnerBuilder;
@@ -37,8 +39,13 @@ import java.util.stream.Collectors;
  * look at the bundled samples package.
  */
 public class LongevitySuite extends Suite {
-    private static final String QUITTER_OPTION = "quitter";
+    static final String QUITTER_OPTION = "quitter";
     private static final boolean QUITTER_DEFAULT = false; // don't quit
+
+    // If this option is true, a test interruption is reported as a test run failure, as opposed to
+    // a successful test run end with a truncated set of tests that were actually run.
+    static final String INVALIDATE_OPTION = "invalidate-if-early";
+    private static final boolean INVALIDATE_DEFAULT = false;
 
     protected Map<String, String> mArguments;
 
@@ -78,6 +85,7 @@ public class LongevitySuite extends Suite {
     private static List<Runner> constructClassRunners(
                 Class<?> suite, RunnerBuilder builder, Map<String, String> args)
             throws InitializationError {
+        // Note: until b/118340229 is resolved, keep the platform class method in sync as necessary.
         // Retrieve annotated suite classes.
         SuiteClasses annotation = suite.getAnnotation(SuiteClasses.class);
         if (annotation == null) {
@@ -86,7 +94,7 @@ public class LongevitySuite extends Suite {
         }
         // Construct and store custom runners for the full suite.
         BiFunction<Map<String, String>, List<Runner>, List<Runner>> modifier =
-                new Iterate<Runner>().andThen(new Shuffle<Runner>());
+                new Iterate<Runner>().andThen(new Shuffle<Runner>()).andThen(new Profile(args));
         return modifier.apply(args, builder.runners(suite, annotation.value()));
     }
 
@@ -99,7 +107,17 @@ public class LongevitySuite extends Suite {
         }
         notifier.addListener(getTimeoutTerminator(notifier));
         // Invoke tests to run through super call.
-        super.run(notifier);
+        try {
+            super.run(notifier);
+        } catch (StoppedByUserException e) {
+            // Invalidate the test run if terminated early and the option is set.
+            if (mArguments.containsKey(INVALIDATE_OPTION) ?
+                Boolean.parseBoolean(mArguments.get(INVALIDATE_OPTION)) : INVALIDATE_DEFAULT) {
+                throw e;
+            } else {
+                return;
+            }
+        }
     }
 
     /**
