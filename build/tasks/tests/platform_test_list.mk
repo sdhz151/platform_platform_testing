@@ -1,4 +1,7 @@
 platform_tests += \
+    apex_file_test \
+    apex_manifest_test \
+    apexservice_test \
     ActivityManagerPerfTests \
     ActivityManagerPerfTestsTestApp \
     AndroidTVJankTests \
@@ -121,7 +124,14 @@ platform_tests += \
     VersatileTestApp_Internal \
     VersatileTestApp_None \
     VoiceInteraction \
+    WifiStrengthScannerUtil \
 
 ifneq ($(strip $(BOARD_PERFSETUP_SCRIPT)),)
 platform_tests += perf-setup.sh
+endif
+
+ifneq ($(filter vsoc_x86 vsoc_x86_64, $(TARGET_DEVICE)),)
+  platform_tests += \
+    CuttlefishRilTests \
+    CuttlefishWifiTests
 endif

@@ -19,9 +19,29 @@ java_library {
     srcs: ["java/**/*.java"],
 
     static_libs: [
-        "androidx-test",
+        "androidx.test.runner",
+        "junit",
+        "perfetto-helper",
+    ],
+
+    sdk_version: "current",
+}
+
+// This library enables additional listeners dependent on platform apis.
+java_library {
+    name: "collector-device-lib-platform",
+    defaults: ["tradefed_errorprone_defaults"],
+
+    srcs: [
+        "java/**/*.java",
+        "platform-helpers/**/*.java",
+    ],
+
+    static_libs: [
+        "androidx.test.runner",
         "collectors-helper",
         "junit",
+        "perfetto-helper",
     ],
 
     platform_apis: true,
