@@ -23,8 +23,10 @@ import com.android.helpers.PerfettoHelper;
 
 import org.junit.After;
 import org.junit.Before;
+
 import org.junit.Test;
 import org.junit.runner.Description;
+import org.junit.runner.Result;
 import org.junit.runner.RunWith;
 import org.mockito.Mock;
 import org.mockito.Mockito;
@@ -51,12 +53,16 @@ import static org.mockito.Mockito.verify;
 @RunWith(AndroidJUnit4.class)
 public class PerfettoListenerTest {
 
+    // A {@code Description} to pass when faking a test run start call.
+    private static final Description FAKE_DESCRIPTION = Description.createSuiteDescription("run");
+
     private Description mRunDesc;
     private Description mTest1Desc;
     private Description mTest2Desc;
     private PerfettoListener mListener;
     private Instrumentation mInstrumentation;
     private Map<String, Integer> mInvocationCount;
+    private DataRecord mDataRecord;
 
     @Mock
     private PerfettoHelper mPerfettoHelper;
@@ -73,6 +79,7 @@ public class PerfettoListenerTest {
         mPerfettoHelper = spy(new PerfettoHelper());
         mInvocationCount = new HashMap<>();
         PerfettoListener listener = new PerfettoListener(b, mPerfettoHelper, mInvocationCount);
+        mDataRecord = listener.createDataRecord();
         listener.setInstrumentation(mInstrumentation);
         return listener;
     }
@@ -81,7 +88,7 @@ public class PerfettoListenerTest {
      * Verify perfetto start and stop collection methods called exactly once for single test.
      */
     @Test
-    public void testPerfettoStartSuccessFlow() throws Exception {
+    public void testPerfettoPerTestSuccessFlow() throws Exception {
         Bundle b = new Bundle();
         mListener = initListener(b);
         doReturn(true).when(mPerfettoHelper).startCollecting(anyString());
@@ -93,9 +100,49 @@ public class PerfettoListenerTest {
         // Test test start behavior
         mListener.testStarted(mTest1Desc);
         verify(mPerfettoHelper, times(1)).startCollecting(anyString());
-        mListener.testFinished(mTest1Desc);
+        mListener.onTestEnd(mDataRecord, mTest1Desc);
         verify(mPerfettoHelper, times(1)).stopCollecting(anyLong(), anyString());
 
+    }
+
+    /*
+     * Verify perfetto start and stop collection methods called exactly once for test run.
+     * and not during each test method.
+     */
+    @Test
+    public void testPerfettoPerRunSuccessFlow() throws Exception {
+        Bundle b = new Bundle();
+        b.putString(PerfettoListener.COLLECT_PER_RUN, "true");
+        mListener = initListener(b);
+        doReturn(true).when(mPerfettoHelper).startCollecting(anyString());
+        doReturn(true).when(mPerfettoHelper).stopCollecting(anyLong(), anyString());
+
+        // Test run start behavior
+        mListener.onTestRunStart(mListener.createDataRecord(), FAKE_DESCRIPTION);
+        verify(mPerfettoHelper, times(1)).startCollecting(anyString());
+        mListener.testStarted(mTest1Desc);
+        verify(mPerfettoHelper, times(1)).startCollecting(anyString());
+        mListener.onTestEnd(mDataRecord, mTest1Desc);
+        verify(mPerfettoHelper, times(0)).stopCollecting(anyLong(), anyString());
+        mListener.onTestRunEnd(mListener.createDataRecord(), new Result());
+        verify(mPerfettoHelper, times(1)).stopCollecting(anyLong(), anyString());
+    }
+
+    /*
+     * Verify stop is not called if perfetto start is not success.
+     */
+    @Test
+    public void testPerfettoPerRunFailureFlow() throws Exception {
+        Bundle b = new Bundle();
+        b.putString(PerfettoListener.COLLECT_PER_RUN, "true");
+        mListener = initListener(b);
+        doReturn(false).when(mPerfettoHelper).startCollecting(anyString());
+
+        // Test run start behavior
+        mListener.onTestRunStart(mListener.createDataRecord(), FAKE_DESCRIPTION);
+        verify(mPerfettoHelper, times(1)).startCollecting(anyString());
+        mListener.onTestRunEnd(mListener.createDataRecord(), new Result());
+        verify(mPerfettoHelper, times(0)).stopCollecting(anyLong(), anyString());
     }
 
     /*
@@ -113,9 +160,8 @@ public class PerfettoListenerTest {
         // Test test start behavior
         mListener.testStarted(mTest1Desc);
         verify(mPerfettoHelper, times(1)).startCollecting(anyString());
-        mListener.testFinished(mTest1Desc);
+        mListener.onTestEnd(mDataRecord, mTest1Desc);
         verify(mPerfettoHelper, times(0)).stopCollecting(anyLong(), anyString());
-
     }
 
     /*
@@ -135,19 +181,20 @@ public class PerfettoListenerTest {
         // Test1 invocation 1 start behavior
         mListener.testStarted(mTest1Desc);
         verify(mPerfettoHelper, times(1)).startCollecting(anyString());
-        mListener.testFinished(mTest1Desc);
+        mListener.onTestEnd(mDataRecord, mTest1Desc);
         verify(mPerfettoHelper, times(1)).stopCollecting(anyLong(), anyString());
 
         // Test1 invocation 2 start behaviour
         mListener.testStarted(mTest1Desc);
         verify(mPerfettoHelper, times(2)).startCollecting(anyString());
-        mListener.testFinished(mTest1Desc);
+        mListener.onTestEnd(mDataRecord, mTest1Desc);
         verify(mPerfettoHelper, times(2)).stopCollecting(anyLong(), anyString());
 
         // Test2 invocation 1 start behaviour
         mListener.testStarted(mTest2Desc);
         verify(mPerfettoHelper, times(3)).startCollecting(anyString());
-        mListener.testFinished(mTest2Desc);
+        mDataRecord = mListener.createDataRecord();
+        mListener.onTestEnd(mDataRecord, mTest2Desc);
         verify(mPerfettoHelper, times(3)).stopCollecting(anyLong(), anyString());
 
         // Check if the the test count is incremented properly.
