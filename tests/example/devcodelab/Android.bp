@@ -1,5 +1,4 @@
-//
-// Copyright (C) 2018 The Android Open Source Project
+//Copyright (C) 2019 The Android Open Source Project
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,19 +11,13 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-//
 
-// Android Instrumentation Target
 android_test {
-    name: "TelephonyUtility",
-    defaults: ["tradefed_errorprone_defaults"],
+    name: "DevCodelabTest",
 
     srcs: ["src/**/*.java"],
-    static_libs: [
-        "androidx.test.runner",
-        "collector-device-lib",
-        "junit",
-    ],
+    sdk_version: "current",
 
-    sdk_version: "28",
+    static_libs: ["android-support-test"],
+    certificate: "platform",
 }

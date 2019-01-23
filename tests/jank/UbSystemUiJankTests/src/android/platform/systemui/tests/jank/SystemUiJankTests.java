@@ -185,8 +185,7 @@ public class SystemUiJankTests extends JankTestBase {
     // Makes sure Recents is opened on the most recent task.
     public void resetRecents() throws RemoteException {
         mDevice.wakeUp();
-        mDevice.pressHome();
-        mLauncher.getWorkspace().switchToOverview();
+        mLauncher.pressHome().switchToOverview();
     }
 
     public void prepareNotifications(int groupMode) throws Exception {
@@ -277,7 +276,7 @@ public class SystemUiJankTests extends JankTestBase {
                 PendingIntent.FLAG_UPDATE_CURRENT);
         Icon icon = Icon.createWithResource(context, ICONS[0]);
         return new Action.Builder(icon, actionTitle, pendingIntent)
-                .setSemanticAction(Action.SEMANTIC_ACTION_CONTEXTUAL_SUGGESTION)
+                .setContextual(true)
                 .build();
     }
 
