@@ -31,6 +31,7 @@ native_tests := \
     bugreportz_test \
     bsdiff_unittest \
     camera_client_test \
+    clatd_test \
     crashcollector \
     debuggerd_test \
     dumpstate_test \
@@ -55,6 +56,7 @@ native_tests := \
     libandroidfw_tests \
     libappfuse_test \
     libbase_test \
+    libbpf_android_test \
     libcutils_test \
     libcutils_test_static \
     libdemangle_test \
@@ -64,6 +66,7 @@ native_tests := \
     libjavacore-unit-tests \
     liblog-unit-tests \
     libminijail_unittest_gtest \
+    libnetdbpf_test \
     libperfmgr_test \
     libprocinfo_test \
     libtextclassifier_tests \
@@ -124,7 +127,6 @@ native_tests := \
     update_engine_unittests \
     vintf_object_test \
     wificond_unit_test \
-    wifilogd_unit_test \
     ziparchive-tests \
     BufferHub_test \
     BufferHubServer_test \
