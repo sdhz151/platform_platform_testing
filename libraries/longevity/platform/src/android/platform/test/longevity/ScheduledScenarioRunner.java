@@ -18,9 +18,12 @@ package android.platform.test.longevity;
 
 import static java.lang.Math.max;
 
+import android.os.Bundle;
 import android.os.SystemClock;
 import android.platform.test.longevity.proto.Configuration.Scenario;
+import android.platform.test.longevity.proto.Configuration.Scenario.ExtraArg;
 import androidx.annotation.VisibleForTesting;
+import androidx.test.InstrumentationRegistry;
 
 import java.util.List;
 
@@ -36,7 +39,7 @@ import org.junit.runners.model.Statement;
  * A {@link BlockJUnit4ClassRunner} that runs a test class with a specified timeout and optionally
  * performs an idle before teardown (staying inside the app for Android CUJs).
  */
-public class ScheduledScenarioRunner extends BlockJUnit4ClassRunner {
+public class ScheduledScenarioRunner extends LongevityClassRunner {
     @VisibleForTesting static final long ENDTIME_LEEWAY_MS = 3000;
 
     private final Scenario mScenario;
@@ -96,7 +99,25 @@ public class ScheduledScenarioRunner extends BlockJUnit4ClassRunner {
     @Override
     protected void runChild(final FrameworkMethod method, RunNotifier notifier) {
         mStartTimeMs = System.currentTimeMillis();
+        // Keep a copy of the bundle arguments for restoring later.
+        Bundle initialArguments = InstrumentationRegistry.getArguments();
+        Bundle modifiedArguments = initialArguments.deepCopy();
+        for (ExtraArg argPair : mScenario.getExtrasList()) {
+            if (argPair.getKey() == null || argPair.getValue() == null) {
+                throw new IllegalArgumentException(
+                        String.format(
+                                "Each extra arg entry in scenario must have both a key and a value,"
+                                        + " but scenario is %s.",
+                                mScenario.toString()));
+            }
+            modifiedArguments.putString(argPair.getKey(), argPair.getValue());
+        }
+        InstrumentationRegistry.registerInstance(
+                InstrumentationRegistry.getInstrumentation(), modifiedArguments);
         super.runChild(method, notifier);
+        // Restore the arguments to the state prior to the scenario.
+        InstrumentationRegistry.registerInstance(
+                InstrumentationRegistry.getInstrumentation(), initialArguments);
         // If there are remaining scenarios, idle until the next one starts.
         if (mShouldIdle) {
             performIdleBeforeNextScenario(getTimeRemaining());
