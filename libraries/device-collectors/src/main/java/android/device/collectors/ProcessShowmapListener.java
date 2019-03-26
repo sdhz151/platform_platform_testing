@@ -18,6 +18,7 @@ package android.device.collectors;
 
 import android.device.collectors.annotations.OptionClass;
 import android.os.Bundle;
+import android.util.Log;
 
 import androidx.annotation.VisibleForTesting;
 
@@ -35,8 +36,9 @@ import org.junit.runner.Description;
  */
 @OptionClass(alias = "process-showmap-collector")
 public class ProcessShowmapListener extends BaseCollectionListener<Long> {
-    @VisibleForTesting
-    static final String PROCESS_NAME_KEY = "processshowmap-process-name";
+    private static final String TAG = ProcessShowmapListener.class.getSimpleName();
+    @VisibleForTesting static final String PROCESS_SEPARATOR = ",";
+    @VisibleForTesting static final String PROCESS_NAMES_KEY = "showmap-process-names";
     private ProcessShowmapHelper mShowmapHelper = new ProcessShowmapHelper();
 
     public ProcessShowmapListener() {
@@ -57,7 +59,12 @@ public class ProcessShowmapListener extends BaseCollectionListener<Long> {
     @Override
     public void onTestRunStart(DataRecord runData, Description description) {
         Bundle args = getArgsBundle();
-        String processName = args.getString(PROCESS_NAME_KEY);
-        mShowmapHelper.setUp(processName);
+        String procsString = args.getString(PROCESS_NAMES_KEY);
+        if (procsString == null) {
+            Log.e(TAG, "No processes provided to sample");
+            return;
+        }
+        String[] procs = procsString.split(PROCESS_SEPARATOR);
+        mShowmapHelper.setUp(procs);
     }
 }
