@@ -56,6 +56,8 @@ public abstract class AbstractStandardAppHelper implements IAppHelper {
     private static final String ERROR_NOT_FOUND =
         "Element %s %s is not found in the application %s";
 
+    private static final long EXIT_WAIT_TIMEOUT = TimeUnit.SECONDS.toMillis(5);
+
     private static File sScreenshotDirectory;
 
     public UiDevice mDevice;
@@ -70,7 +72,6 @@ public abstract class AbstractStandardAppHelper implements IAppHelper {
     public AbstractStandardAppHelper(Instrumentation instr) {
         mInstrumentation = instr;
         mDevice = UiDevice.getInstance(instr);
-        mLauncherStrategy = LauncherStrategyFactory.getInstance(mDevice).getLauncherStrategy();
         mFavorShellCommands =
                 Boolean.valueOf(
                         InstrumentationRegistry.getArguments().getString(FAVOR_CMD, "false"));
@@ -112,13 +113,13 @@ public abstract class AbstractStandardAppHelper implements IAppHelper {
         if (mFavorShellCommands) {
             String output = null;
             try {
+                Log.i(LOG_TAG, String.format("Sending command to launch: %s", pkg));
                 Intent intent =
                         mInstrumentation
                                 .getContext()
                                 .getPackageManager()
                                 .getLaunchIntentForPackage(pkg);
                 mInstrumentation.getContext().startActivity(intent);
-                Log.i(LOG_TAG, String.format("Sent command to launch: %s", pkg));
             } catch (ActivityNotFoundException e) {
                 removeDialogWatchers();
                 throw new RuntimeException(String.format("Failed to find package: %s", pkg), e);
@@ -127,7 +128,7 @@ public abstract class AbstractStandardAppHelper implements IAppHelper {
             // Launch using the UI and launcher strategy.
             String id = getLauncherName();
             if (!mDevice.hasObject(By.pkg(pkg).depth(0))) {
-                mLauncherStrategy.launch(id, pkg);
+                getLauncherStrategy().launch(id, pkg);
                 Log.i(LOG_TAG, "Launched package: id=" + id + ", pkg=" + pkg);
             }
         }
@@ -148,15 +149,14 @@ public abstract class AbstractStandardAppHelper implements IAppHelper {
      */
     @Override
     public void exit() {
+        Log.i(LOG_TAG, "Exiting the current application.");
         if (mPressHomeToExit) {
             mDevice.pressHome();
             mDevice.waitForIdle();
-            if (!mDevice.hasObject(mLauncherStrategy.getWorkspaceSelector())) {
-                throw new IllegalStateException("Pressing Home failed to exit the app.");
-            }
         } else {
             int maxBacks = 4;
-            while (!mDevice.hasObject(mLauncherStrategy.getWorkspaceSelector()) && maxBacks > 0) {
+            while (!mDevice.hasObject(getLauncherStrategy().getWorkspaceSelector())
+                    && maxBacks > 0) {
                 mDevice.pressBack();
                 mDevice.waitForIdle();
                 maxBacks--;
@@ -165,6 +165,10 @@ public abstract class AbstractStandardAppHelper implements IAppHelper {
             if (maxBacks == 0) {
                 mDevice.pressHome();
             }
+        }
+        if (!mDevice.wait(
+                Until.hasObject(mLauncherStrategy.getWorkspaceSelector()), EXIT_WAIT_TIMEOUT)) {
+            throw new IllegalStateException("Failed to exit the app to launcher.");
         }
     }
 
@@ -363,5 +367,12 @@ public abstract class AbstractStandardAppHelper implements IAppHelper {
 
     private void removeDialogWatchers() {
         removeWatcher(AppIsNotRespondingWatcher.class.getSimpleName());
+    }
+
+    private ILauncherStrategy getLauncherStrategy() {
+        if (mLauncherStrategy == null) {
+            mLauncherStrategy = LauncherStrategyFactory.getInstance(mDevice).getLauncherStrategy();
+        }
+        return mLauncherStrategy;
     }
 }
