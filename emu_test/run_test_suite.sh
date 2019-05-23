@@ -10,6 +10,7 @@
 # Owner: akagrawal@google.com
 
 DIST_DIR=$1
+BUILD_ID=$2
 
 BUILD_DIR="out/prebuilt_cached/builds"
 
@@ -33,8 +34,7 @@ fi
 echo "$TEST_SUITE"
 
 mkdir -p $BUILD_DIR/emulator
-#fetch_artifact --bid 5441626 --target sdk_tools_linux sdk-repo-linux-emulator-5441626.zip $BUILD_DIR/emulator/
-fetch_artifact --target sdk_tools_linux --branch aosp-emu-master-dev --latest "sdk-repo-linux-emulator-[0-9]*" $BUILD_DIR/emulator/
+fetch_artifacts.py -build_target linux-sdk_tools_linux -branch aosp-emu-master-dev -image_path gs://android-build-emu/builds -dest $BUILD_DIR/emulator/
 EMU_BIN=`ls $BUILD_DIR/emulator`
 echo "$EMU_BIN"
 
@@ -50,7 +50,7 @@ then
     fi
 fi
 
-if [ -d "$BUILD_DIR/gphone_x86-user" ];
+if [ -d "$BUILD_DIR/gphone_x86_64-user" ];
 then
     SYS_IMAGE_64=`ls $BUILD_DIR/gphone_x86_64-user`
     if [[ $TEST_SUITE == *"cts"* ]]
