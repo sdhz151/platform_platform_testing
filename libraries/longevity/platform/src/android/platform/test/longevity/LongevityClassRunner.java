@@ -16,10 +16,15 @@
 
 package android.platform.test.longevity;
 
+import android.os.Bundle;
 import androidx.annotation.VisibleForTesting;
+import androidx.test.InstrumentationRegistry;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import org.junit.After;
 import org.junit.AfterClass;
@@ -27,6 +32,7 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.internal.runners.statements.RunAfters;
 import org.junit.internal.runners.statements.RunBefores;
+import org.junit.runner.Description;
 import org.junit.runners.BlockJUnit4ClassRunner;
 import org.junit.runners.model.FrameworkMethod;
 import org.junit.runners.model.InitializationError;
@@ -39,11 +45,42 @@ import org.junit.runners.model.Statement;
  * longevity tests.
  */
 public class LongevityClassRunner extends BlockJUnit4ClassRunner {
+    @VisibleForTesting static final String FILTER_OPTION = "exclude-class";
+    @VisibleForTesting static final String ITERATION_SEP = "@";
+    // A constant to indicate that the iteration number is not set.
+    @VisibleForTesting static final int ITERATION_NOT_SET = -1;
+
+    private String[] mExcludedClasses;
+
     private boolean mTestFailed = true;
     private boolean mTestAttempted = false;
+    // Iteration number.
+    private int mIteration = ITERATION_NOT_SET;
 
     public LongevityClassRunner(Class<?> klass) throws InitializationError {
+        this(klass, InstrumentationRegistry.getArguments());
+    }
+
+    @VisibleForTesting
+    LongevityClassRunner(Class<?> klass, Bundle args) throws InitializationError {
         super(klass);
+        mExcludedClasses =
+                args.containsKey(FILTER_OPTION)
+                        ? args.getString(FILTER_OPTION).split(",")
+                        : new String[] {};
+    }
+
+    /** Set the iteration of the test that this runner is running. */
+    public void setIteration(int iteration) {
+        mIteration = iteration;
+    }
+
+    /**
+     * Utilized by tests to check that the iteration is set, independent of the description logic.
+     */
+    @VisibleForTesting
+    int getIteration() {
+        return mIteration;
     }
 
     /**
@@ -121,6 +158,16 @@ public class LongevityClassRunner extends BlockJUnit4ClassRunner {
                     "Test success status should not be checked before the test is attempted.");
         }
         return mTestFailed;
+    }
+
+    @Override
+    protected boolean isIgnored(FrameworkMethod child) {
+        if (super.isIgnored(child)) return true;
+        // Check if this class has been filtered.
+        String name = getTestClass().getJavaClass().getCanonicalName();
+        return Arrays.stream(mExcludedClasses)
+                .map(f -> Pattern.compile(f).matcher(name))
+                .anyMatch(Matcher::matches);
     }
 
     /**
@@ -202,5 +249,26 @@ public class LongevityClassRunner extends BlockJUnit4ClassRunner {
             }
         }
         return errors;
+    }
+
+    /**
+     * Rename the child class name to add iterations if the renaming iteration option is enabled.
+     *
+     * <p>Renaming the class here is chosen over renaming the method name because
+     *
+     * <ul>
+     *   <li>Conceptually, the runner is running a class multiple times, as opposed to a method.
+     *   <li>When instrumenting a suite in command line, by default the instrumentation command
+     *       outputs the class name only. Renaming the class helps with interpretation in this case.
+     */
+    @Override
+    protected Description describeChild(FrameworkMethod method) {
+        Description original = super.describeChild(method);
+        if (mIteration == ITERATION_NOT_SET) {
+            return original;
+        }
+        return Description.createTestDescription(
+                String.join(ITERATION_SEP, original.getClassName(), String.valueOf(mIteration)),
+                original.getMethodName());
     }
 }
