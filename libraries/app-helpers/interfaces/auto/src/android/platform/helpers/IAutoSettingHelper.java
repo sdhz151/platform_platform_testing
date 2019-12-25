@@ -16,10 +16,8 @@
 
 package android.platform.helpers;
 
-/**
- * Helper class for functional tests of Settings facet
- */
-public interface IAutoSettingHelper extends IAppHelper {
+/** Helper class for functional tests of Settings facet */
+public interface IAutoSettingHelper extends IAppHelper, Scrollable {
 
     /**
      * enum for Day/Night mode.
@@ -56,6 +54,13 @@ public interface IAutoSettingHelper extends IAppHelper {
      * @param setting option to open.
      */
     void openSetting(String setting);
+
+    /**
+     * Setup expectations: The app is open
+     *
+     * <p>Open full settings page
+     */
+    void openFullSettings();
 
     /**
      * Setup expectations: The app is open
